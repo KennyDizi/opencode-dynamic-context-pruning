@@ -1,19 +1,19 @@
 {
     "$schema": "https://json.schemastore.org/package.json",
     "name": "@tarquinen/opencode-dcp",
-    "version": "3.1.9",
+    "version": "3.1.10",
     "type": "module",
     "description": "OpenCode plugin that optimizes token usage by pruning obsolete tool outputs from conversation context",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/ocdcp-cli.js",
+    "types": "./dist/ocdcp-cli.d.ts",
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
+            "types": "./dist/ocdcp-cli.d.ts",
+            "import": "./dist/ocdcp-cli.js"
         },
         "./server": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
+            "types": "./dist/ocdcp-cli.d.ts",
+            "import": "./dist/ocdcp-cli.js"
         }
     },
     "scripts": {
@@ -49,21 +49,22 @@
     "author": "tarquinen",
     "license": "AGPL-3.0-or-later",
     "peerDependencies": {
-        "@opencode-ai/plugin": ">=1.4.3"
+        "@opencode-ai/plugin": "^1.14.28",
+        "@opencode-ai/sdk": "^1.14.28"
     },
     "dependencies": {
         "@anthropic-ai/tokenizer": "^0.0.4",
-        "@opencode-ai/sdk": "^1.4.3",
+        "@opencode-ai/sdk": "^1.14.28",
         "jsonc-parser": "^3.3.1",
         "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@opencode-ai/plugin": "^1.4.3",
-        "@types/node": "^25.5.0",
-        "prettier": "^3.8.1",
+        "@opencode-ai/plugin": "^1.14.28",
+        "@types/node": "^25.6.0",
+        "prettier": "^3.8.3",
         "tsup": "^8.5.1",
         "tsx": "^4.21.0",
-        "typescript": "^6.0.2"
+        "typescript": "^6.0.3"
     },
     "files": [
         "dist/",
