@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import type { WithParts } from "../state"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
@@ -17,7 +18,7 @@ interface RunContext {
         patterns: string[]
         always: string[]
         metadata: Record<string, unknown>
-    }): Promise<void>
+    }): Effect.Effect<void>
     metadata(input: { title: string }): void
     sessionID: string
 }
