@@ -13,12 +13,12 @@ const builtinNames = new Set([
     ...builtinModules.map((name) => name.replace(/^node:/, "")),
 ])
 
-const requiredRepoFiles = ["dist/index.js", "dist/index.d.ts", "README.md", "LICENSE"]
+const requiredRepoFiles = ["dist/ocdcp-cli.js", "dist/ocdcp-cli.d.ts", "README.md", "LICENSE"]
 
 const requiredTarballFiles = [
     "package.json",
-    "dist/index.js",
-    "dist/index.d.ts",
+    "dist/ocdcp-cli.js",
+    "dist/ocdcp-cli.d.ts",
     "README.md",
     "LICENSE",
 ]
@@ -55,16 +55,16 @@ function assertRepoFilesExist() {
 function assertPackageJsonShape() {
     const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"))
 
-    if (pkg.main !== "./dist/index.js") {
-        fail(`package.json main must remain ./dist/index.js, found ${pkg.main ?? "<missing>"}`)
+    if (pkg.main !== "./dist/ocdcp-cli.js") {
+        fail(`package.json main must remain ./dist/ocdcp-cli.js, found ${pkg.main ?? "<missing>"}`)
     }
 
-    if (pkg.exports?.["."]?.import !== "./dist/index.js") {
-        fail("expected package.json exports['.'].import to be './dist/index.js'")
+    if (pkg.exports?.["."]?.import !== "./dist/ocdcp-cli.js") {
+        fail("expected package.json exports['.'].import to be './dist/ocdcp-cli.js'")
     }
 
-    if (pkg.exports?.["./server"]?.import !== "./dist/index.js") {
-        fail("expected package.json exports['./server'].import to be './dist/index.js'")
+    if (pkg.exports?.["./server"]?.import !== "./dist/ocdcp-cli.js") {
+        fail("expected package.json exports['./server'].import to be './dist/ocdcp-cli.js'")
     }
 
     const files = Array.isArray(pkg.files) ? pkg.files : []
