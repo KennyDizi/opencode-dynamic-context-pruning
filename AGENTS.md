@@ -313,16 +313,22 @@ interface CompressRangeEntry {
 
 ## Subdirectory Knowledge Bases
 
-Dedicated AGENTS.md files exist for high-complexity subdirs:
+Dedicated AGENTS.md files exist for every subdirectory:
 
 | Directory | AGENTS.md | Focus |
 |-----------|-----------|-------|
 | `lib/compress/` | [compress/AGENTS.md](lib/compress/AGENTS.md) | Compression engine, pipeline flow, guard conditions |
 | `lib/messages/` | [messages/AGENTS.md](lib/messages/AGENTS.md) | Prune pipeline, inject subsystem, message transforms |
+| `lib/messages/inject/` | [messages/inject/AGENTS.md](lib/messages/inject/AGENTS.md) | Nudge injection, message ID injection, subagent result expansion |
 | `lib/state/` | [state/AGENTS.md](lib/state/AGENTS.md) | Session state, PruneMessagesState structure, persistence |
 | `lib/commands/` | [commands/AGENTS.md](lib/commands/AGENTS.md) | /dcp command handlers, sentinel pattern |
 | `lib/prompts/` | [prompts/AGENTS.md](lib/prompts/AGENTS.md) | Prompt templates, override system, assembly |
+| `lib/prompts/extensions/` | [prompts/extensions/AGENTS.md](lib/prompts/extensions/AGENTS.md) | Conditional prompt fragments, tool format extensions, LLM guidance |
+| `lib/strategies/` | [strategies/AGENTS.md](lib/strategies/AGENTS.md) | Deduplication and error-purge compression strategies |
+| `lib/subagents/` | [subagents/AGENTS.md](lib/subagents/AGENTS.md) | Subagent result handling, compression-aware merging |
 | `lib/ui/` | [ui/AGENTS.md](lib/ui/AGENTS.md) | Notifications, token display caching |
+| `scripts/` | [scripts/AGENTS.md](scripts/AGENTS.md) | Developer CLI tools, package validation, session analysis |
+| `tests/` | [tests/AGENTS.md](tests/AGENTS.md) | Test suite, Node test runner patterns, fixture factories |
 
 ## Known Complexity Hotspots
 
