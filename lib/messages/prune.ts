@@ -19,7 +19,6 @@ export const prune = (
 ): void => {
     filterCompressedRanges(state, logger, config, messages)
     pruneToolOutputs(state, logger, messages)
-    pruneToolOutputs(state, logger, messages)
     pruneToolInputs(state, logger, messages)
     pruneToolErrors(state, logger, messages)
 }
