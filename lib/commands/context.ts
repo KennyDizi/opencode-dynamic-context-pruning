@@ -45,6 +45,7 @@ import type { SessionState, WithParts } from "../state"
 import { sendIgnoredMessage } from "../ui/notification"
 import { formatTokenCount } from "../ui/utils"
 import { isIgnoredUserMessage } from "../messages/query"
+import { getMessageParts } from "../messages/utils"
 import { isMessageCompacted } from "../state/utils"
 import { countTokens, extractCompletedToolOutput, getCurrentParams } from "../token-utils"
 import type { AssistantMessage, TextPart, ToolPart } from "@opencode-ai/sdk/v2"
@@ -130,7 +131,7 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
 
     for (const msg of messages) {
         allMessageIds.add(msg.info.id)
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         const isCompacted = isMessageCompacted(state, msg)
         const pruneEntry = state.prune.messages.byMessageId.get(msg.info.id)
         const isMessagePruned = !!pruneEntry && pruneEntry.activeBlockIds.length > 0

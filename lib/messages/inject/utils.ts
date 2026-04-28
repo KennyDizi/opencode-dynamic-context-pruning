@@ -252,10 +252,18 @@ function collectAnchoredMessages(
     messages: WithParts[],
 ): Array<{ message: WithParts; index: number }> {
     const anchoredMessages: Array<{ message: WithParts; index: number }> = []
+    if (anchorMessageIds.size === 0) {
+        return anchoredMessages
+    }
+
+    const indexById = new Map<string, number>()
+    for (let i = 0; i < messages.length; i++) {
+        indexById.set(messages[i].info.id, i)
+    }
 
     for (const anchorMessageId of anchorMessageIds) {
-        const index = messages.findIndex((message) => message.info.id === anchorMessageId)
-        if (index === -1) {
+        const index = indexById.get(anchorMessageId)
+        if (index === undefined) {
             continue
         }
 

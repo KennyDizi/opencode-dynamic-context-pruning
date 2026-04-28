@@ -67,6 +67,10 @@ type MessagePart = WithParts["parts"][number]
 type ToolPart = Extract<MessagePart, { type: "tool" }>
 type TextPart = Extract<MessagePart, { type: "text" }>
 
+export const getMessageParts = (message: WithParts): WithParts["parts"] => {
+    return Array.isArray(message.parts) ? message.parts : []
+}
+
 export const appendToLastTextPart = (message: WithParts, injection: string): boolean => {
     const textPart = findLastTextPart(message)
     if (!textPart) {
@@ -145,7 +149,7 @@ export function buildToolIdList(state: SessionState, messages: WithParts[]): str
         if (isMessageCompacted(state, msg)) {
             continue
         }
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         if (parts.length > 0) {
             for (const part of parts) {
                 if (part.type === "tool" && part.callID && part.tool) {

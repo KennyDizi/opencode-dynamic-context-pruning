@@ -1,4 +1,5 @@
 import type { WithParts } from "../state"
+import { getMessageParts } from "../messages/utils"
 
 const SUB_AGENT_RESULT_BLOCK_REGEX = /(<task_result>\s*)([\s\S]*?)(\s*<\/task_result>)/i
 
@@ -47,7 +48,7 @@ export function mergeSubagentResult(output: string, subAgentResultText: string):
 }
 
 function getLastTextPart(message: WithParts): string {
-    const parts = Array.isArray(message.parts) ? message.parts : []
+    const parts = getMessageParts(message)
     for (let index = parts.length - 1; index >= 0; index--) {
         const part = parts[index]
         if (part.type !== "text" || typeof part.text !== "string") {
@@ -66,7 +67,7 @@ function getLastTextPart(message: WithParts): string {
 }
 
 function assistantMessageHasCompressTool(message: WithParts): boolean {
-    const parts = Array.isArray(message.parts) ? message.parts : []
+    const parts = getMessageParts(message)
     return parts.some(
         (part) =>
             part.type === "tool" && part.tool === "compress" && part.state?.status === "completed",

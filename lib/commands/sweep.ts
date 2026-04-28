@@ -14,7 +14,7 @@ import { sendIgnoredMessage } from "../ui/notification"
 import { formatPrunedItemsList } from "../ui/utils"
 import { getCurrentParams, getTotalToolTokens } from "../token-utils"
 import { isIgnoredUserMessage } from "../messages/query"
-import { buildToolIdList } from "../messages/utils"
+import { buildToolIdList, getMessageParts } from "../messages/utils"
 import { saveSessionState } from "../state/persistence"
 import { isMessageCompacted } from "../state/utils"
 import {
@@ -58,7 +58,7 @@ function collectToolIdsAfterIndex(
         if (isMessageCompacted(state, msg)) {
             continue
         }
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         if (parts.length > 0) {
             for (const part of parts) {
                 if (part.type === "tool" && part.callID && part.tool) {

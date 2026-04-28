@@ -6,7 +6,7 @@ import {
     getSubAgentId,
     mergeSubagentResult,
 } from "../../subagents/subagent-results"
-import { stripHallucinationsFromString } from "../utils"
+import { stripHallucinationsFromString, getMessageParts } from "../utils"
 
 async function fetchSubAgentMessages(client: any, sessionId: string): Promise<WithParts[]> {
     const response = await client.session.messages({
@@ -28,7 +28,7 @@ export const injectExtendedSubAgentResults = async (
     }
 
     for (const message of messages) {
-        const parts = Array.isArray(message.parts) ? message.parts : []
+        const parts = getMessageParts(message)
 
         for (const part of parts) {
             if (part.type !== "tool" || part.tool !== "task" || !part.callID) {

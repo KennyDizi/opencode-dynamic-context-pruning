@@ -2,7 +2,7 @@ import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { isMessageCompacted } from "../state/utils"
-import { createSyntheticUserMessage, replaceBlockIdsWithBlocked } from "./utils"
+import { createSyntheticUserMessage, getMessageParts, replaceBlockIdsWithBlocked } from "./utils"
 import { getLastUserMessage } from "./query"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
@@ -18,57 +18,12 @@ export const prune = (
     messages: WithParts[],
 ): void => {
     filterCompressedRanges(state, logger, config, messages)
-    // pruneFullTool(state, logger, messages)
+    pruneToolOutputs(state, logger, messages)
     pruneToolOutputs(state, logger, messages)
     pruneToolInputs(state, logger, messages)
     pruneToolErrors(state, logger, messages)
 }
 
-const pruneFullTool = (state: SessionState, logger: Logger, messages: WithParts[]): void => {
-    const messagesToRemove: string[] = []
-
-    for (const msg of messages) {
-        if (isMessageCompacted(state, msg)) {
-            continue
-        }
-
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
-        const partsToRemove: string[] = []
-
-        for (const part of parts) {
-            if (part.type !== "tool") {
-                continue
-            }
-
-            if (!state.prune.tools.has(part.callID)) {
-                continue
-            }
-            if (part.tool !== "edit" && part.tool !== "write") {
-                continue
-            }
-
-            partsToRemove.push(part.callID)
-        }
-
-        if (partsToRemove.length === 0) {
-            continue
-        }
-
-        msg.parts = parts.filter(
-            (part) => part.type !== "tool" || !partsToRemove.includes(part.callID),
-        )
-
-        if (msg.parts.length === 0) {
-            messagesToRemove.push(msg.info.id)
-        }
-    }
-
-    if (messagesToRemove.length > 0) {
-        const result = messages.filter((msg) => !messagesToRemove.includes(msg.info.id))
-        messages.length = 0
-        messages.push(...result)
-    }
-}
 
 const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithParts[]): void => {
     for (const msg of messages) {
@@ -76,7 +31,7 @@ const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithPar
             continue
         }
 
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         for (const part of parts) {
             if (part.type !== "tool") {
                 continue
@@ -102,7 +57,7 @@ const pruneToolInputs = (state: SessionState, logger: Logger, messages: WithPart
             continue
         }
 
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         for (const part of parts) {
             if (part.type !== "tool") {
                 continue
@@ -131,7 +86,7 @@ const pruneToolErrors = (state: SessionState, logger: Logger, messages: WithPart
             continue
         }
 
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         for (const part of parts) {
             if (part.type !== "tool") {
                 continue
@@ -171,7 +126,8 @@ const filterCompressedRanges = (
 
     const result: WithParts[] = []
 
-    for (const msg of messages) {
+    for (let msgIndex = 0; msgIndex < messages.length; msgIndex++) {
+        const msg = messages[msgIndex]
         const msgId = msg.info.id
 
         // Check if there's a summary to inject at this anchor point
@@ -191,7 +147,6 @@ const filterCompressedRanges = (
                 })
             } else {
                 // Find user message for variant and as base for synthetic message
-                const msgIndex = messages.indexOf(msg)
                 const userMessage = getLastUserMessage(messages, msgIndex)
 
                 if (userMessage) {

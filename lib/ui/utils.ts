@@ -1,6 +1,7 @@
 import { SessionState, ToolParameterEntry, WithParts } from "../state"
 import { countTokens } from "../token-utils"
 import { isIgnoredUserMessage } from "../messages/query"
+import { getMessageParts } from "../messages/utils"
 
 function extractParameterKey(tool: string, parameters: any): string {
     if (!parameters) return ""
@@ -216,7 +217,7 @@ export function cacheSystemPromptTokens(state: SessionState, messages: WithParts
         if (msg.info.role !== "user" || isIgnoredUserMessage(msg)) {
             continue
         }
-        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const parts = getMessageParts(msg)
         for (const part of parts) {
             if (part.type === "text" && !(part as any).ignored) {
                 firstUserText += part.text

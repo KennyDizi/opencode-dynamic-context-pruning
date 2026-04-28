@@ -2,6 +2,7 @@ import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
 import { PluginConfig } from "../config"
 import { isMessageCompacted } from "./utils"
+import { getMessageParts } from "../messages/utils"
 import { countToolTokens } from "../token-utils"
 
 const MAX_TOOL_CACHE_SIZE = 1000
@@ -25,7 +26,7 @@ export function syncToolCache(
                 continue
             }
 
-            const parts = Array.isArray(msg.parts) ? msg.parts : []
+            const parts = getMessageParts(msg)
             for (const part of parts) {
                 if (part.type === "step-start") {
                     turnCounter++

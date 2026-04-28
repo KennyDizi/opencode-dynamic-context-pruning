@@ -1,6 +1,7 @@
 import type { PluginConfig } from "../config"
 import type { WithParts } from "../state"
 import { isMessageWithInfo } from "./shape"
+import { getMessageParts } from "./utils"
 
 export const getLastUserMessage = (
     messages: WithParts[],
@@ -28,7 +29,7 @@ export const messageHasCompress = (message: WithParts): boolean => {
         return false
     }
 
-    const parts = Array.isArray(message.parts) ? message.parts : []
+    const parts = getMessageParts(message)
     return parts.some(
         (part) =>
             part.type === "tool" && part.tool === "compress" && part.state?.status === "completed",
@@ -44,7 +45,7 @@ export const isIgnoredUserMessage = (message: WithParts): boolean => {
         return false
     }
 
-    const parts = Array.isArray(message.parts) ? message.parts : []
+    const parts = getMessageParts(message)
     if (parts.length === 0) {
         return true
     }
