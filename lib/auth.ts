@@ -21,7 +21,9 @@ export function configureClientAuth(client: any): any {
 
     // The SDK client has an internal client with request interceptors
     // Access the underlying client to add the interceptor
-    const innerClient = client._client || client.client
+    // Access the SDK's underlying fetch client to inject auth headers.
+    // _client (older SDK) or .client (newer SDK) — both are SDK internals.
+    const innerClient: any = (client as any)?._client ?? (client as any)?.client
 
     if (innerClient?.interceptors?.request) {
         innerClient.interceptors.request.use((request: Request) => {

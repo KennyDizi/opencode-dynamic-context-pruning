@@ -5,6 +5,7 @@ import * as _anthropicTokenizer from "@anthropic-ai/tokenizer"
 const anthropicCountTokens = (_anthropicTokenizer.countTokens ??
     (_anthropicTokenizer as any).default?.countTokens) as typeof _anthropicTokenizer.countTokens
 import { getLastUserMessage } from "./messages/query"
+import { getMessageParts } from "./messages/utils"
 
 export function getCurrentTokenUsage(state: SessionState, messages: WithParts[]): number {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -70,7 +71,8 @@ export function countTokens(text: string): number {
     if (!text) return 0
     try {
         return anthropicCountTokens(text)
-    } catch {
+    } catch (error) {
+        console.warn("countTokens: anthropic tokenizer failed, using length/4 fallback:", error)
         return Math.round(text.length / 4)
     }
 }
@@ -139,7 +141,7 @@ export function getTotalToolTokens(state: SessionState, toolIds: string[]): numb
 
 export function countMessageTextTokens(msg: WithParts): number {
     const texts: string[] = []
-    const parts = Array.isArray(msg.parts) ? msg.parts : []
+    const parts = getMessageParts(msg)
     for (const part of parts) {
         if (part.type === "text") {
             texts.push(part.text)
@@ -150,7 +152,7 @@ export function countMessageTextTokens(msg: WithParts): number {
 }
 
 export function countAllMessageTokens(msg: WithParts): number {
-    const parts = Array.isArray(msg.parts) ? msg.parts : []
+    const parts = getMessageParts(msg)
     const texts: string[] = []
     for (const part of parts) {
         if (part.type === "text") {

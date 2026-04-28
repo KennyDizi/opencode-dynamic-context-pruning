@@ -9,6 +9,7 @@ import {
     allocateBlockId,
     allocateRunId,
     applyCompressionState,
+    withPruneTransaction,
     wrapCompressedSummary,
 } from "./state"
 import type { CompressMessageToolArgs } from "./types"
@@ -94,40 +95,42 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
                 })
             }
 
-            const runId = allocateRunId(ctx.state)
+            await withPruneTransaction(ctx.state, async () => {
+                const runId = allocateRunId(ctx.state)
 
-            for (const { plan, summaryWithTools } of preparedPlans) {
-                const blockId = allocateBlockId(ctx.state)
-                const storedSummary = wrapCompressedSummary(blockId, summaryWithTools)
-                const summaryTokens = countTokens(storedSummary)
+                for (const { plan, summaryWithTools } of preparedPlans) {
+                    const blockId = allocateBlockId(ctx.state)
+                    const storedSummary = wrapCompressedSummary(blockId, summaryWithTools)
+                    const summaryTokens = countTokens(storedSummary)
 
-                applyCompressionState(
-                    ctx.state,
-                    {
-                        topic: plan.entry.topic,
-                        batchTopic: input.topic,
-                        startId: plan.entry.messageId,
-                        endId: plan.entry.messageId,
-                        mode: "message",
+                    applyCompressionState(
+                        ctx.state,
+                        {
+                            topic: plan.entry.topic,
+                            batchTopic: input.topic,
+                            startId: plan.entry.messageId,
+                            endId: plan.entry.messageId,
+                            mode: "message",
+                            runId,
+                            compressMessageId: toolCtx.messageID,
+                            compressCallId: callId,
+                            summaryTokens,
+                        },
+                        plan.selection,
+                        plan.anchorMessageId,
+                        blockId,
+                        storedSummary,
+                        [],
+                    )
+
+                    notifications.push({
+                        blockId,
                         runId,
-                        compressMessageId: toolCtx.messageID,
-                        compressCallId: callId,
+                        summary: summaryWithTools,
                         summaryTokens,
-                    },
-                    plan.selection,
-                    plan.anchorMessageId,
-                    blockId,
-                    storedSummary,
-                    [],
-                )
-
-                notifications.push({
-                    blockId,
-                    runId,
-                    summary: summaryWithTools,
-                    summaryTokens,
-                })
-            }
+                    })
+                }
+            })
 
             await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 

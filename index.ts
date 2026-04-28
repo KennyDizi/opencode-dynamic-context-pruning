@@ -59,6 +59,9 @@ const server: Plugin = (async (ctx) => {
             config,
             prompts,
         ),
+        // Note: SDK types output.messages as `{ info: Message; parts: Part[] }[]` but our handler uses
+        // the project's `WithParts[]` shape (different SDK version types). `as any` is required until
+        // the SDK aligns. Remove when upstream resolves the Message type version mismatch.
         "experimental.chat.messages.transform": createChatMessageTransformHandler(
             ctx.client,
             state,
@@ -66,7 +69,7 @@ const server: Plugin = (async (ctx) => {
             config,
             prompts,
             hostPermissions,
-        ) as any,
+        ) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
         "experimental.text.complete": createTextCompleteHandler(),
         "command.execute.before": createCommandExecuteHandler(
             ctx.client,

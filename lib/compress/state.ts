@@ -266,3 +266,57 @@ export function applyCompressionState(
         newlyCompressedToolIds,
     }
 }
+
+export async function withPruneTransaction<T>(
+    state: SessionState,
+    fn: () => Promise<T>,
+): Promise<T> {
+    const messagesState = state.prune.messages
+    const snapshot = {
+        nextBlockId: messagesState.nextBlockId,
+        nextRunId: messagesState.nextRunId,
+        blocksById: new Map(
+            Array.from(messagesState.blocksById.entries()).map(([id, block]) => [
+                id,
+                {
+                    ...block,
+                    includedBlockIds: [...block.includedBlockIds],
+                    consumedBlockIds: [...block.consumedBlockIds],
+                    parentBlockIds: [...block.parentBlockIds],
+                    directMessageIds: [...block.directMessageIds],
+                    directToolIds: [...block.directToolIds],
+                    effectiveMessageIds: [...block.effectiveMessageIds],
+                    effectiveToolIds: [...block.effectiveToolIds],
+                },
+            ]),
+        ),
+        activeBlockIds: new Set(messagesState.activeBlockIds),
+        activeByAnchorMessageId: new Map(messagesState.activeByAnchorMessageId),
+        byMessageId: new Map(
+            Array.from(messagesState.byMessageId.entries()).map(([id, entry]) => [
+                id,
+                {
+                    ...entry,
+                    allBlockIds: [...entry.allBlockIds],
+                    activeBlockIds: [...entry.activeBlockIds],
+                },
+            ]),
+        ),
+        pruneTokenCounter: state.stats.pruneTokenCounter,
+        totalPruneTokens: state.stats.totalPruneTokens,
+    }
+
+    try {
+        return await fn()
+    } catch (err) {
+        messagesState.nextBlockId = snapshot.nextBlockId
+        messagesState.nextRunId = snapshot.nextRunId
+        messagesState.blocksById = snapshot.blocksById
+        messagesState.activeBlockIds = snapshot.activeBlockIds
+        messagesState.activeByAnchorMessageId = snapshot.activeByAnchorMessageId
+        messagesState.byMessageId = snapshot.byMessageId
+        state.stats.pruneTokenCounter = snapshot.pruneTokenCounter
+        state.stats.totalPruneTokens = snapshot.totalPruneTokens
+        throw err
+    }
+}

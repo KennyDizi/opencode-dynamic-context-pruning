@@ -1,6 +1,7 @@
 import type { SessionState, WithParts } from "../state"
 import { formatBlockRef, parseBoundaryId } from "../message-ids"
 import { isIgnoredUserMessage } from "../messages/query"
+import { getMessageParts } from "../messages/utils"
 import { filterMessages } from "../messages/shape"
 import { countAllMessageTokens } from "../token-utils"
 import type { BoundaryReference, SearchContext, SelectionResolution } from "./types"
@@ -140,7 +141,7 @@ export function resolveSelection(
             messageTokenById.set(messageId, countAllMessageTokens(rawMessage))
         }
 
-        const parts = Array.isArray(rawMessage.parts) ? rawMessage.parts : []
+        const parts = getMessageParts(rawMessage)
         for (const part of parts) {
             if (part.type !== "tool" || !part.callID) {
                 continue

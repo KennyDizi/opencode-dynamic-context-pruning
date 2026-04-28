@@ -85,7 +85,7 @@ export class Logger {
 
             const logFile = join(dailyLogDir, `${new Date().toISOString().split("T")[0]}.log`)
             await writeFile(logFile, logLine, { flag: "a" })
-        } catch (error) {}
+        } catch { /* intentional: log writes must not throw */ }
     }
 
     info(message: string, data?: any) {
@@ -221,6 +221,6 @@ export class Logger {
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
             const contextFile = join(contextDir, `${timestamp}.json`)
             await writeFile(contextFile, JSON.stringify(minimized, null, 2))
-        } catch (error) {}
+        } catch { /* intentional: log writes must not throw */ }
     }
 }

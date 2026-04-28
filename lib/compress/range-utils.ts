@@ -11,6 +11,9 @@ import type {
 
 const BLOCK_PLACEHOLDER_REGEX = /\(b(\d+)\)|\{block_(\d+)\}/gi
 
+// Note: startId/endId format validation (mNNNN, bN) happens downstream in
+// resolveBoundaryIds() via parseBoundaryId(). validateArgs only checks
+// that fields are non-empty strings.
 export function validateArgs(args: CompressRangeToolArgs): void {
     if (typeof args.topic !== "string" || args.topic.trim().length === 0) {
         throw new Error("topic is required and must be a non-empty string")
@@ -180,15 +183,15 @@ export function injectBlockPlaceholders(
     const consumedSeen = new Set<number>()
 
     if (placeholders.length > 0) {
-        expanded = ""
+        const segments: string[] = []
         for (const placeholder of placeholders) {
             const target = summaryByBlockId.get(placeholder.blockId)
             if (!target) {
                 throw new Error(`Compressed block not found: (b${placeholder.blockId})`)
             }
 
-            expanded += summary.slice(cursor, placeholder.startIndex)
-            expanded += restoreSummary(target.summary)
+            segments.push(summary.slice(cursor, placeholder.startIndex))
+            segments.push(restoreSummary(target.summary))
             cursor = placeholder.endIndex
 
             if (!consumedSeen.has(placeholder.blockId)) {
@@ -197,7 +200,8 @@ export function injectBlockPlaceholders(
             }
         }
 
-        expanded += summary.slice(cursor)
+        segments.push(summary.slice(cursor))
+        expanded = segments.join("")
     }
 
     expanded = injectBoundarySummary(

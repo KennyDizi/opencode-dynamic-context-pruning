@@ -1,5 +1,6 @@
 import type { SessionState } from "../state"
 import { isIgnoredUserMessage } from "../messages/query"
+import { getMessageParts } from "../messages/utils"
 import {
     getFilePathsFromParameters,
     isFilePathProtected,
@@ -35,7 +36,7 @@ export function appendProtectedUserMessages(
         if (message.info.role !== "user") continue
         if (isIgnoredUserMessage(message)) continue
 
-        const parts = Array.isArray(message.parts) ? message.parts : []
+        const parts = getMessageParts(message)
         for (const part of parts) {
             if (part.type === "text" && typeof part.text === "string" && part.text.trim()) {
                 userTexts.push(part.text)
@@ -74,7 +75,7 @@ export async function appendProtectedTools(
         const message = searchContext.rawMessagesById.get(messageId)
         if (!message) continue
 
-        const parts = Array.isArray(message.parts) ? message.parts : []
+        const parts = getMessageParts(message)
         for (const part of parts) {
             if (part.type === "tool" && part.callID) {
                 let isToolProtected = isToolNameProtected(part.tool, protectedTools)

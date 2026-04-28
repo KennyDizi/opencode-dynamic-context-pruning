@@ -46,12 +46,16 @@ export async function prepareSession(
         )
     }
 
-    await toolCtx.ask({
-        permission: "compress",
-        patterns: ["*"],
-        always: ["*"],
-        metadata: {},
-    })
+    try {
+        await toolCtx.ask({
+            permission: "compress",
+            patterns: ["*"],
+            always: ["*"],
+            metadata: {},
+        })
+    } catch (err) {
+        throw new Error(`Compress permission request failed: ${String(err)}`)
+    }
 
     toolCtx.metadata({ title })
 

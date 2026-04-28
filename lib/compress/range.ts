@@ -18,6 +18,7 @@ import {
     allocateBlockId,
     allocateRunId,
     applyCompressionState,
+    withPruneTransaction,
     wrapCompressedSummary,
 } from "./state"
 import type { CompressRangeToolArgs } from "./types"
@@ -135,42 +136,47 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                 })
             }
 
-            const runId = allocateRunId(ctx.state)
+            await withPruneTransaction(ctx.state, async () => {
+                const runId = allocateRunId(ctx.state)
 
-            for (const preparedPlan of preparedPlans) {
-                const blockId = allocateBlockId(ctx.state)
-                const storedSummary = wrapCompressedSummary(blockId, preparedPlan.finalSummary)
-                const summaryTokens = countTokens(storedSummary)
+                for (const preparedPlan of preparedPlans) {
+                    const blockId = allocateBlockId(ctx.state)
+                    const storedSummary = wrapCompressedSummary(
+                        blockId,
+                        preparedPlan.finalSummary,
+                    )
+                    const summaryTokens = countTokens(storedSummary)
 
-                const applied = applyCompressionState(
-                    ctx.state,
-                    {
-                        topic: input.topic,
-                        batchTopic: input.topic,
-                        startId: preparedPlan.entry.startId,
-                        endId: preparedPlan.entry.endId,
-                        mode: "range",
+                    const applied = applyCompressionState(
+                        ctx.state,
+                        {
+                            topic: input.topic,
+                            batchTopic: input.topic,
+                            startId: preparedPlan.entry.startId,
+                            endId: preparedPlan.entry.endId,
+                            mode: "range",
+                            runId,
+                            compressMessageId: toolCtx.messageID,
+                            compressCallId: callId,
+                            summaryTokens,
+                        },
+                        preparedPlan.selection,
+                        preparedPlan.anchorMessageId,
+                        blockId,
+                        storedSummary,
+                        preparedPlan.consumedBlockIds,
+                    )
+
+                    totalCompressedMessages += applied.messageIds.length
+
+                    notifications.push({
+                        blockId,
                         runId,
-                        compressMessageId: toolCtx.messageID,
-                        compressCallId: callId,
+                        summary: preparedPlan.finalSummary,
                         summaryTokens,
-                    },
-                    preparedPlan.selection,
-                    preparedPlan.anchorMessageId,
-                    blockId,
-                    storedSummary,
-                    preparedPlan.consumedBlockIds,
-                )
-
-                totalCompressedMessages += applied.messageIds.length
-
-                notifications.push({
-                    blockId,
-                    runId,
-                    summary: preparedPlan.finalSummary,
-                    summaryTokens,
-                })
-            }
+                    })
+                }
+            })
 
             await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 
