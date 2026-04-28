@@ -54,7 +54,8 @@ npm run check:package  # build + verify package contents
 ```
 index.ts                          → Plugin entry, hook registration
 lib/
-├── config.ts                     → Config loading, 3-layer merge (global→custom→project), Zod validation
+├── config.ts                     → Config loading, 3-layer merge (global→custom→project); re-exports everything from config-schema.ts
+├── config-schema.ts              → PluginConfig types, Zod-style validation (validateConfigTypes, getInvalidConfigKeys), defaultConfig, DEFAULTS, VALID_CONFIG_KEYS
 ├── hooks.ts                      → Hook factories for all Plugin lifecycle hooks
 ├── auth.ts                       → Client auth for secure mode
 ├── logger.ts                     → Logging (debug mode via config)
@@ -93,6 +94,7 @@ lib/
 ├── prompts/                      → All prompt templates
 │   ├── index.ts                  → renderSystemPrompt helper
 │   ├── store.ts                  → PromptStore (loads from files or defaults, hot-reload)
+│   ├── loader.ts                 → File I/O + path helpers for prompt override system (resolvePromptPaths, readFileIfExists)
 │   ├── system.ts                 → Base system prompt
 │   ├── compress-range.ts         → Range compress tool prompt
 │   ├── compress-message.ts       → Message compress tool prompt
@@ -119,7 +121,7 @@ lib/
 │   ├── stats.ts                  → /dcp stats
 │   ├── sweep.ts                  → /dcp sweep
 │   ├── manual.ts                 → /dcp manual (toggle/trigger)
-│   ├── compress.ts               → (handled in hooks.ts inline)
+│   ├── compress.ts               → handleCompressCommand (extracted from hooks.ts)
 │   ├── decompress.ts             → /dcp decompress
 │   └── recompress.ts             → /dcp recompress
 │
@@ -238,14 +240,14 @@ interface CompressRangeEntry {
 - Test files: `tests/*.test.ts`
 - Run: `node --import tsx --test tests/*.test.ts`
 - Pattern: `test("description", () => { ... })` with `assert.equal`/`assert.deepEqual`
-- Test helpers build mock messages via `buildMessage(role, parts)` factory
+- Test helpers consolidated in `tests/helpers/index.ts` — `buildConfig`, `textPart`, `toolPart`, `repeatedWord`; JSONC loader hook at `tests/helpers/jsonc-loader-hook.mjs`
 
 ### Config System
 
 - 3-layer merge: global defaults → custom config → project config
 - JSONC support (comments allowed) via `jsonc-parser`
 - Schema: `dcp.schema.json`
-- Validation: Zod v4 (`zod@^4.3.6`)
+- Validation: custom `validateConfigTypes` + `getInvalidConfigKeys` (lib/config-schema.ts); **NOT Zod** despite the dependency being present
 - Custom prompts via `config.experimental.customPrompts` directory
 
 ## Rules & Anti-Patterns
@@ -332,11 +334,11 @@ Dedicated AGENTS.md files exist for every subdirectory:
 
 ## Known Complexity Hotspots
 
-- **lib/config.ts** (987 lines) — All config loading, merging, validation. Largest file.
-- **lib/hooks.ts** (367 lines) — All hook factories, command routing
-- **lib/prompts/store.ts** (467 lines) — PromptStore, hot-reload, custom override resolution
-- **lib/state/utils.ts** (345 lines) — Block lookups, token stats, compaction detection
-- **lib/messages/inject/utils.ts** (374 lines) — Nudge injection, context limit helpers
-- **lib/compress/range-utils.ts** (308 lines) — Placeholder parsing, range validation
-- **lib/messages/prune.ts** (233 lines) — Core prune logic (replaces spans with placeholders)
+- **lib/config-schema.ts** (644 lines) — PluginConfig types, validation logic, defaultConfig, DEFAULTS constants. Core config contract.
+- **lib/config.ts** (382 lines) — Config loading, 3-layer merge. Imports and re-exports everything from config-schema.ts.
+- **lib/hooks.ts** (384 lines) — All hook factories, command routing
+- **lib/prompts/store.ts** (369 lines) — PromptStore, hot-reload, custom override resolution
+- **lib/messages/inject/utils.ts** (382 lines) — Nudge injection, context limit helpers
+- **lib/state/utils.ts** (365 lines) — Block lookups, token stats, compaction detection
+- **lib/compress/range-utils.ts** (312 lines) — Placeholder parsing, range validation
 - **lib/prompts/system.ts** — System prompt template (critical for LLM behavior)

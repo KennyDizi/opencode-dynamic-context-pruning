@@ -12,7 +12,7 @@
 | message.ts            | Message-mode tool: per-message compression                          |
 | pipeline.ts           | prepareSession + finalize (shared scaffolding for both modes)       |
 | search.ts             | Boundary ID resolution (mNNNN/bN → actual messages)                 |
-| state.ts              | allocateBlockId, allocateRunId, applyCompression (mutates state)    |
+|| state.ts              | allocateBlockId, allocateRunId, applyCompression (mutates state); `withPruneTransaction` for rollback-safe mutations |
 | timing.ts             | Compression timing tracking (start/complete events)                 |
 | protected-content.ts  | Appends protected tool outputs to summaries                         |
 | range-utils.ts        | Range validation, placeholder parsing, block injection into text    |

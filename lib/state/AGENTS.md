@@ -1,6 +1,6 @@
 # lib/state — Session State
 
-**6 files · 1002L** — Single mutable instance per session. Core hub: imported by 50+ files.
+**6 files · ~1000L** — Single mutable instance per session. Core hub: imported by 50+ files.
 
 ## FILES
 | File | Role |

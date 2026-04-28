@@ -1,12 +1,13 @@
 # lib/prompts — Prompt Templates
 
-**8 files · 666L + extensions/ (3 files · 110L)** — All LLM prompt content. Hot-reloadable. No template engine, raw template literals only.
+**9 files · 740L + extensions/ (4 files · 150L)** — All LLM prompt content. Hot-reloadable. No template engine, raw template literals only.
 
 ## FILES
 | File | Role |
 |------|------|
 | `index.ts` | Barrel: exports `PromptStore`, `RuntimePrompts` types, `renderSystemPrompt()` assembler |
-| `store.ts` (467L) | `PromptStore` class. Disk I/O, path resolution, override merging, `reload()` |
+|| `store.ts` (369L) | `PromptStore` class. Disk I/O calls delegated to `loader.ts`, path resolution, override merging, `reload()` |
+|| `loader.ts` (116L) | File I/O + path resolution for override system (`resolvePromptPaths`, `readFileIfExists`, `buildDefaultPromptFileContent`). Extracted from `store.ts` |
 | `system.ts` | Base system prompt. **CRITICAL** — drives LLM behavior session-wide |
 | `compress-range.ts` | Range compress tool prompt |
 | `compress-message.ts` | Message compress tool prompt |

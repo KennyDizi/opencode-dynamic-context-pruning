@@ -27,7 +27,7 @@
 - **`deactivatedByUser` is owned by `decompress.ts`.** It's the ONLY site that sets `block.deactivatedByUser = true` (alongside `block.active = false`). Other deactivations (consumed by a later compression) leave this flag false. Treat it as the "user-restored" marker.
 - **`recompress.ts` is the inverse**: sets `active = true`, `deactivatedByUser = false`, then triggers a re-prune on the next transform.
 - **`sweep.ts` filters by `config.commands.protectedTools`** before pruning. Don't bypass this check, even for "obviously safe" tools.
-- **`compress.ts` is intentionally empty.** Routing for `/dcp compress` happens inline in `createCommandExecuteHandler`. Don't add logic here, it won't run.
+- **`compress.ts` is now a real module.** `handleCompressCommand` was extracted from `hooks.ts` into `lib/commands/compress.ts` and is exported from the commands barrel. Routing still happens in `createCommandExecuteHandler` but the implementation lives here.
 - **`compression-targets.ts` is the shared resolver** for both decompress and recompress. New block-targeting commands should reuse `resolveCompressionTargets()` rather than re-walking `state.prune.blocks`.
 - **`context.ts` token math** flows through `computeStateTokenStats()` (from `state/utils.ts`). Don't compute token breakdowns ad-hoc; extend that helper.
 
