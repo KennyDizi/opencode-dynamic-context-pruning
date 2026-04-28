@@ -25,11 +25,11 @@ import {
 import { filterMessages, filterMessagesInPlace } from "./messages/shape"
 import {
     applyPendingManualTrigger,
+    handleCompressCommand,
     handleContextCommand,
     handleDecompressCommand,
     handleHelpCommand,
     handleManualToggleCommand,
-    handleManualTriggerCommand,
     handleRecompressCommand,
     handleStatsCommand,
     handleSweepCommand,
@@ -51,10 +51,11 @@ export function createSystemPromptHandler(
     config: PluginConfig,
     prompts: PromptStore,
 ) {
-    return async (
-        input: { sessionID?: string; model: { limit: { context: number } } },
-        output: { system: string[] },
+return async (
+input: { sessionID?: string; model: { limit: { context: number } } },
+output: { system: string[] },
     ) => {
+      try {
         if (input.model?.limit?.context) {
             state.modelContextLimit = input.model.limit.context
             logger.debug("Cached model context limit", { limit: state.modelContextLimit })
@@ -91,7 +92,10 @@ export function createSystemPromptHandler(
             output.system[output.system.length - 1] += "\n\n" + newPrompt
         } else {
             output.system.push(newPrompt)
-        }
+}
+    } catch (err) {
+        logger.error("System prompt handler failed", { err: String(err) })
+      }
     }
 }
 
@@ -104,6 +108,7 @@ export function createChatMessageTransformHandler(
     hostPermissions: HostPermissionSnapshot,
 ) {
     return async (input: {}, output: { messages: WithParts[] }) => {
+      try {
         const receivedMessages = Array.isArray(output.messages) ? output.messages.length : 0
         const messages = filterMessagesInPlace(output.messages)
         if (messages.length !== receivedMessages) {
@@ -151,7 +156,12 @@ export function createChatMessageTransformHandler(
 
         if (state.sessionId) {
             await logger.saveContext(state.sessionId, output.messages)
-        }
+}
+    } catch (err) {
+        logger.error("Chat transform handler failed, returning untransformed messages", {
+            err: String(err),
+        })
+      }
     }
 }
 
@@ -163,10 +173,11 @@ export function createCommandExecuteHandler(
     workingDirectory: string,
     hostPermissions: HostPermissionSnapshot,
 ) {
-    return async (
-        input: { command: string; sessionID: string; arguments: string },
-        output: { parts: any[] },
+return async (
+input: { command: string; sessionID: string; arguments: string },
+output: { parts: any[] },
     ) => {
+      try {
         if (!config.commands.enabled) {
             return
         }
@@ -231,23 +242,12 @@ export function createCommandExecuteHandler(
             }
 
             if (subcommand === "compress") {
-                const userFocus = subArgs.join(" ").trim()
-                const prompt = await handleManualTriggerCommand(commandCtx, "compress", userFocus)
-                if (!prompt) {
-                    throw new Error("__DCP_MANUAL_TRIGGER_BLOCKED__")
-                }
-
-                state.manualMode = "compress-pending"
-                state.pendingManualTrigger = {
-                    sessionId: input.sessionID,
-                    prompt,
-                }
-                const rawArgs = (input.arguments || "").trim()
-                output.parts.length = 0
-                output.parts.push({
-                    type: "text",
-                    text: rawArgs ? `/dcp ${rawArgs}` : `/dcp ${subcommand}`,
-                })
+                await handleCompressCommand(commandCtx, {
+                    arguments: input.arguments,
+                    sessionID: input.sessionID,
+                    subcommand,
+                    subArgs,
+                }, output)
                 return
             }
 
@@ -269,21 +269,35 @@ export function createCommandExecuteHandler(
 
             await handleHelpCommand(commandCtx)
             throw new Error("__DCP_HELP_HANDLED__")
+}
+    } catch (err) {
+        if (err instanceof Error && err.message.startsWith("__DCP_")) {
+            throw err
         }
+        logger.error("Command execute handler failed", {
+            command: input.command,
+            err: String(err),
+        })
+      }
     }
 }
 
 export function createTextCompleteHandler() {
-    return async (
-        _input: { sessionID: string; messageID: string; partID: string },
-        output: { text: string },
+return async (
+_input: { sessionID: string; messageID: string; partID: string },
+output: { text: string },
     ) => {
-        output.text = stripHallucinationsFromString(output.text)
+        try {
+output.text = stripHallucinationsFromString(output.text)
+    } catch {
+            // Leave output unchanged on failure
+        }
     }
 }
 
 export function createEventHandler(state: SessionState, logger: Logger) {
     return async (input: { event: any }) => {
+      try {
         const eventTime =
             typeof input.event?.time === "number" && Number.isFinite(input.event.time)
                 ? input.event.time
@@ -362,6 +376,9 @@ export function createEventHandler(state: SessionState, logger: Logger) {
             state.compressionTiming.startsByCallId.delete(
                 buildCompressionTimingKey(part.messageID, part.callID),
             )
-        }
+}
+    } catch (err) {
+        logger.error("Event handler failed", { err: String(err) })
+      }
     }
 }

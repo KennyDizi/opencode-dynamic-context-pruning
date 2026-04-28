@@ -1,4 +1,5 @@
 export { handleContextCommand } from "./context"
+export { handleCompressCommand } from "./compress"
 export { handleDecompressCommand } from "./decompress"
 export { handleHelpCommand } from "./help"
 export {
