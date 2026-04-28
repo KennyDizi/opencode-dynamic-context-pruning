@@ -5,8 +5,8 @@ import { tmpdir } from "node:os"
 import { mkdirSync } from "node:fs"
 import { createCompressRangeTool } from "../lib/compress/range"
 import { createSessionState, type WithParts } from "../lib/state"
-import type { PluginConfig } from "../lib/config"
 import { Logger } from "../lib/logger"
+import { buildConfig, textPart } from "./helpers"
 
 const testDataHome = join(tmpdir(), `opencode-dcp-tests-${process.pid}`)
 const testConfigHome = join(tmpdir(), `opencode-dcp-config-tests-${process.pid}`)
@@ -17,64 +17,6 @@ process.env.XDG_CONFIG_HOME = testConfigHome
 mkdirSync(testDataHome, { recursive: true })
 mkdirSync(testConfigHome, { recursive: true })
 
-function buildConfig(): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: true,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode: "range",
-            permission: "allow",
-            showCompression: false,
-            maxContextLimit: 150000,
-            minContextLimit: 50000,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: [],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
-
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
 
 function buildMessages(sessionID: string): WithParts[] {
     return [
@@ -142,7 +84,7 @@ test("compress range rebuilds subagent message refs after session state was rese
         },
         state,
         logger,
-        config: buildConfig(),
+        config: buildConfig({ mode: "range", allowSubAgents: true, protectedTools: [] }),
         prompts: {
             reload() {},
             getRuntimePrompts() {
@@ -183,7 +125,7 @@ test("compress range mode batches multiple ranges into one notification", async 
     const rawMessages = buildMessages(sessionID)
     const state = createSessionState()
     const logger = new Logger(false)
-    const config = buildConfig()
+    const config = buildConfig({ mode: "range", allowSubAgents: true, protectedTools: [] })
     config.pruneNotification = "detailed"
     config.pruneNotificationType = "toast"
 
@@ -259,7 +201,7 @@ test("compress range mode rejects overlapping batched ranges", async () => {
         },
         state,
         logger,
-        config: buildConfig(),
+        config: buildConfig({ mode: "range", allowSubAgents: true, protectedTools: [] }),
         prompts: {
             reload() {},
             getRuntimePrompts() {

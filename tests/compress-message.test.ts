@@ -5,8 +5,8 @@ import { tmpdir } from "node:os"
 import { mkdirSync } from "node:fs"
 import { createCompressMessageTool } from "../lib/compress/message"
 import { createSessionState, type WithParts } from "../lib/state"
-import type { PluginConfig } from "../lib/config"
 import { Logger } from "../lib/logger"
+import { buildConfig, textPart, toolPart } from "./helpers"
 
 const testDataHome = join(tmpdir(), `opencode-dcp-message-tests-${process.pid}`)
 const testConfigHome = join(tmpdir(), `opencode-dcp-message-config-tests-${process.pid}`)
@@ -17,86 +17,6 @@ process.env.XDG_CONFIG_HOME = testConfigHome
 mkdirSync(testDataHome, { recursive: true })
 mkdirSync(testConfigHome, { recursive: true })
 
-function buildConfig(): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: false,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode: "message",
-            permission: "allow",
-            showCompression: false,
-            maxContextLimit: 150000,
-            minContextLimit: 50000,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: ["task"],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
-
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
-
-function toolPart(
-    messageID: string,
-    sessionID: string,
-    callID: string,
-    toolName: string,
-    output: string,
-) {
-    return {
-        id: `${callID}-part`,
-        messageID,
-        sessionID,
-        type: "tool" as const,
-        tool: toolName,
-        callID,
-        state: {
-            status: "completed" as const,
-            input: { description: "demo" },
-            output,
-        },
-    }
-}
 
 function buildMessages(sessionID: string): WithParts[] {
     return [

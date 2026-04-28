@@ -3,16 +3,8 @@ import test from "node:test"
 import { Logger } from "../lib/logger"
 import { assignMessageRefs } from "../lib/message-ids"
 import { checkSession, createSessionState, type WithParts } from "../lib/state"
+import { textPart } from "./helpers"
 
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
 
 function buildCompactedMessages(sessionID: string): WithParts[] {
     return [

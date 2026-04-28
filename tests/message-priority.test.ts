@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig } from "../lib/config"
 import { createTextCompleteHandler } from "../lib/hooks"
 import { Logger } from "../lib/logger"
 import { assignMessageRefs } from "../lib/message-ids"
@@ -10,87 +9,8 @@ import { prune } from "../lib/messages/prune"
 import { buildPriorityMap } from "../lib/messages/priority"
 import { stripHallucinationsFromString } from "../lib/messages/utils"
 import { createSessionState, type WithParts } from "../lib/state"
+import { buildConfig, repeatedWord, textPart, toolPart } from "./helpers"
 
-function buildConfig(mode: "message" | "range" = "message"): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: false,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode,
-            permission: "allow",
-            showCompression: false,
-            maxContextLimit: 150000,
-            minContextLimit: 50000,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: ["task"],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
-
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
-
-function toolPart(
-    messageID: string,
-    sessionID: string,
-    callID: string,
-    toolName: string,
-    output: string,
-) {
-    return {
-        id: `${callID}-part`,
-        messageID,
-        sessionID,
-        type: "tool" as const,
-        tool: toolName,
-        callID,
-        state: {
-            status: "completed" as const,
-            input: { description: "demo" },
-            output,
-        },
-    }
-}
 
 function buildMessage(
     id: string,
@@ -126,9 +46,6 @@ function buildMessage(
     }
 }
 
-function repeatedWord(word: string, count: number): string {
-    return Array.from({ length: count }, () => word).join(" ")
-}
 
 test("injectMessageIds injects ID into every tool output for assistant messages", () => {
     const sessionID = "ses_message_priority_tags"
@@ -307,7 +224,7 @@ test("injectMessageIds injects ID into every tool output in range mode", () => {
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     injectMessageIds(state, config, messages)
@@ -474,7 +391,7 @@ test("range-mode nudges append to existing text parts before tool outputs", () =
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     state.prune.messages.activeBlockIds.add(7)
@@ -520,7 +437,7 @@ test("range-mode nudges inject only once for assistant messages with multiple te
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     state.nudges.contextLimitAnchors.add("msg-assistant-1")
@@ -554,7 +471,7 @@ test("range-mode nudges skip empty assistant messages to avoid prefill (issue #4
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     state.nudges.contextLimitAnchors.add("msg-assistant-empty")
@@ -600,7 +517,7 @@ test("range-mode nudges skip assistant with only pending tool parts (issue #463)
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     state.nudges.contextLimitAnchors.add("msg-assistant-pending")
@@ -634,7 +551,7 @@ test("range-mode nudges skip assistant messages with only empty text parts (issu
         },
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     state.nudges.contextLimitAnchors.add("msg-assistant-empty-text")
@@ -660,7 +577,7 @@ test("message-mode rendered compressed summaries mark block IDs as BLOCKED", () 
         buildMessage("msg-assistant-1", "assistant", sessionID, "Follow-up", 2),
     ]
     const state = createSessionState()
-    const config = buildConfig("message")
+    const config = buildConfig({ mode: "message" })
     const logger = new Logger(false)
 
     state.prune.messages.byMessageId.set("msg-user-1", {
@@ -710,7 +627,7 @@ test("range-mode rendered compressed summaries keep block IDs", () => {
         buildMessage("msg-assistant-1", "assistant", sessionID, "Follow-up", 2),
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
     const logger = new Logger(false)
 
     state.prune.messages.byMessageId.set("msg-user-1", {
@@ -830,7 +747,7 @@ test("injectMessageIds skips empty assistant messages to avoid prefill (issue #4
         buildMessage("msg-user-2", "user", sessionID, "continue", 3),
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     injectMessageIds(state, config, messages)
@@ -869,7 +786,7 @@ test("injectMessageIds skips assistant with only pending tool parts (issue #463)
         buildMessage("msg-user-2", "user", sessionID, "continue", 3),
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     injectMessageIds(state, config, messages)
@@ -900,7 +817,7 @@ test("injectMessageIds skips assistant with empty text part (issue #463)", () =>
         buildMessage("msg-user-2", "user", sessionID, "continue", 3),
     ]
     const state = createSessionState()
-    const config = buildConfig("range")
+    const config = buildConfig({ mode: "range" })
 
     assignMessageRefs(state, messages)
     injectMessageIds(state, config, messages)

@@ -1,68 +1,20 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig } from "../lib/config"
 import {
     createChatMessageTransformHandler,
     createCommandExecuteHandler,
     createEventHandler,
     createTextCompleteHandler,
-} from "../lib/hooks"
+    } from "../lib/hooks"
 import { Logger } from "../lib/logger"
 import {
     createSessionState,
     ensureSessionInitialized,
     saveSessionState,
     type WithParts,
-} from "../lib/state"
+    } from "../lib/state"
+import { buildConfig } from "./helpers"
 
-function buildConfig(permission: "allow" | "ask" | "deny" = "allow"): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: false,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode: "message",
-            permission,
-            showCompression: false,
-            maxContextLimit: 150000,
-            minContextLimit: 50000,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: ["task"],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
 
 function buildMessage(id: string, role: "user" | "assistant", text: string): WithParts {
     return {
@@ -88,7 +40,7 @@ function buildMessage(id: string, role: "user" | "assistant", text: string): Wit
 test("chat message transform strips hallucinated tags even when compress is denied", async () => {
     const state = createSessionState()
     const logger = new Logger(false)
-    const config = buildConfig("deny")
+    const config = buildConfig({ permission: "deny" })
     const handler = createChatMessageTransformHandler(
         { session: { get: async () => ({}) } } as any,
         state,
@@ -115,7 +67,7 @@ test("chat message transform strips hallucinated tags even when compress is deni
 test("chat message transform drops messages without info instead of crashing", async () => {
     const state = createSessionState()
     const logger = new Logger(false)
-    const config = buildConfig("deny")
+    const config = buildConfig({ permission: "deny" })
     const handler = createChatMessageTransformHandler(
         { session: { get: async () => ({}) } } as any,
         state,
@@ -164,7 +116,7 @@ test("command execute exits after effective permission resolves to deny", async 
         } as any,
         createSessionState(),
         new Logger(false),
-        buildConfig("deny"),
+        buildConfig({ permission: "deny" }),
         "/tmp",
         { global: undefined, agents: {} },
     )

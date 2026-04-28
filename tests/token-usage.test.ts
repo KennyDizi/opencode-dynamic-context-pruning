@@ -1,75 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig } from "../lib/config"
 import { isContextOverLimits } from "../lib/messages/inject/utils"
 import { wrapCompressedSummary } from "../lib/compress/state"
 import { createSessionState, type WithParts } from "../lib/state"
 import type { CompressionBlock } from "../lib/state"
 import { getCurrentTokenUsage } from "../lib/token-utils"
+import { buildConfig, repeatedWord, textPart } from "./helpers"
 
-function buildConfig(maxContextLimit: number, minContextLimit = 1): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: false,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode: "message",
-            permission: "allow",
-            showCompression: false,
-            summaryBuffer: true,
-            maxContextLimit,
-            minContextLimit,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: ["task"],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
-
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
-
-function repeatedWord(word: string, count: number): string {
-    return Array.from({ length: count }, () => word).join(" ")
-}
 
 function buildCompactedMessages(): WithParts[] {
     const sessionID = "ses_compaction_token_usage"
@@ -218,7 +155,7 @@ test("isContextOverLimits ignores stale summary totals and resumes with fresh re
     assert.equal(getCurrentTokenUsage(state, messages), 0)
 
     const underLimit = isContextOverLimits(
-        buildConfig(staleAssistantTotal - 1, 1),
+        buildConfig({ summaryBuffer: true, maxContextLimit: staleAssistantTotal - 1, minContextLimit: 1 }),
         state,
         undefined,
         undefined,
@@ -234,7 +171,7 @@ test("isContextOverLimits ignores stale summary totals and resumes with fresh re
     assert.equal(getCurrentTokenUsage(state, messages), freshReportedTotal)
 
     const overLimit = isContextOverLimits(
-        buildConfig(freshReportedTotal - 1, 1),
+        buildConfig({ summaryBuffer: true, maxContextLimit: freshReportedTotal - 1, minContextLimit: 1 }),
         state,
         undefined,
         undefined,
@@ -258,7 +195,7 @@ test("isContextOverLimits extends the max threshold by active summary tokens", (
     const freshReportedTotal = 2400 + 600 + 150 + 300
 
     const underExtendedLimit = isContextOverLimits(
-        buildConfig(freshReportedTotal - 1, 1),
+        buildConfig({ summaryBuffer: true, maxContextLimit: freshReportedTotal - 1, minContextLimit: 1 }),
         state,
         undefined,
         undefined,
@@ -268,7 +205,7 @@ test("isContextOverLimits extends the max threshold by active summary tokens", (
     assert.equal(underExtendedLimit.overMaxLimit, false)
 
     const overExtendedLimit = isContextOverLimits(
-        buildConfig(freshReportedTotal - 1001, 1),
+        buildConfig({ summaryBuffer: true, maxContextLimit: freshReportedTotal - 1001, minContextLimit: 1 }),
         state,
         undefined,
         undefined,
@@ -290,7 +227,7 @@ test("isContextOverLimits does not extend the max threshold when summaryBuffer i
     state.prune.messages.activeBlockIds.add(7)
 
     const freshReportedTotal = 2400 + 600 + 150 + 300
-    const config = buildConfig(freshReportedTotal - 1, 1)
+    const config = buildConfig({ summaryBuffer: true, maxContextLimit: freshReportedTotal - 1, minContextLimit: 1 })
     config.compress.summaryBuffer = false
 
     const overLimit = isContextOverLimits(config, state, undefined, undefined, messages)

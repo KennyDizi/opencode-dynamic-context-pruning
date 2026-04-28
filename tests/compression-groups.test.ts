@@ -8,8 +8,8 @@ import { createCompressRangeTool } from "../lib/compress/range"
 import { handleDecompressCommand } from "../lib/commands/decompress"
 import { handleRecompressCommand } from "../lib/commands/recompress"
 import { createSessionState, type WithParts } from "../lib/state"
-import type { PluginConfig } from "../lib/config"
 import { Logger } from "../lib/logger"
+import { buildConfig, textPart, toolPart } from "./helpers"
 
 const testDataHome = join(tmpdir(), `opencode-dcp-compression-groups-${process.pid}`)
 const testConfigHome = join(tmpdir(), `opencode-dcp-compression-groups-config-${process.pid}`)
@@ -20,86 +20,6 @@ process.env.XDG_CONFIG_HOME = testConfigHome
 mkdirSync(testDataHome, { recursive: true })
 mkdirSync(testConfigHome, { recursive: true })
 
-function buildConfig(mode: "message" | "range"): PluginConfig {
-    return {
-        enabled: true,
-        debug: false,
-        pruneNotification: "off",
-        pruneNotificationType: "chat",
-        commands: {
-            enabled: true,
-            protectedTools: [],
-        },
-        manualMode: {
-            enabled: false,
-            automaticStrategies: true,
-        },
-        turnProtection: {
-            enabled: false,
-            turns: 4,
-        },
-        experimental: {
-            allowSubAgents: false,
-            customPrompts: false,
-        },
-        protectedFilePatterns: [],
-        compress: {
-            mode,
-            permission: "allow",
-            showCompression: false,
-            maxContextLimit: 150000,
-            minContextLimit: 50000,
-            nudgeFrequency: 5,
-            iterationNudgeThreshold: 15,
-            nudgeForce: "soft",
-            protectedTools: ["task"],
-            protectUserMessages: false,
-        },
-        strategies: {
-            deduplication: {
-                enabled: true,
-                protectedTools: [],
-            },
-            purgeErrors: {
-                enabled: true,
-                turns: 4,
-                protectedTools: [],
-            },
-        },
-    }
-}
-
-function textPart(messageID: string, sessionID: string, id: string, text: string) {
-    return {
-        id,
-        messageID,
-        sessionID,
-        type: "text" as const,
-        text,
-    }
-}
-
-function toolPart(
-    messageID: string,
-    sessionID: string,
-    callID: string,
-    toolName: string,
-    output: string,
-) {
-    return {
-        id: `${callID}-part`,
-        messageID,
-        sessionID,
-        type: "tool" as const,
-        tool: toolName,
-        callID,
-        state: {
-            status: "completed" as const,
-            input: { description: "demo" },
-            output,
-        },
-    }
-}
 
 function buildMessages(sessionID: string): WithParts[] {
     return [
@@ -174,10 +94,10 @@ test("compression notifications increment by tool call across range and message 
         },
     }
 
-    const rangeConfig = buildConfig("range")
+    const rangeConfig = buildConfig({ mode: "range" })
     rangeConfig.pruneNotification = "detailed"
     rangeConfig.pruneNotificationType = "toast"
-    const messageConfig = buildConfig("message")
+    const messageConfig = buildConfig({ mode: "message" })
     messageConfig.pruneNotification = "detailed"
     messageConfig.pruneNotificationType = "toast"
 
@@ -277,7 +197,7 @@ test("decompress groups batched message compressions by tool call", async () => 
         client,
         state,
         logger,
-        config: buildConfig("message"),
+        config: buildConfig({ mode: "message" }),
         prompts: {
             reload() {},
             getRuntimePrompts() {
@@ -377,7 +297,7 @@ test("decompress keeps batched ranges individually restorable", async () => {
         client,
         state,
         logger,
-        config: buildConfig("range"),
+        config: buildConfig({ mode: "range" }),
         prompts: {
             reload() {},
             getRuntimePrompts() {
