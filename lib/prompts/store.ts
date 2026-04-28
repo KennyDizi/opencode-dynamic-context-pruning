@@ -1,6 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "fs"
-import { join, dirname } from "path"
-import { homedir } from "os"
+import { writeFileSync, mkdirSync } from "fs"
+import { join } from "path"
 import type { Logger } from "../logger"
 import { SYSTEM as SYSTEM_PROMPT } from "./system"
 import { COMPRESS_RANGE as COMPRESS_RANGE_PROMPT } from "./compress-range"
@@ -9,6 +8,14 @@ import { CONTEXT_LIMIT_NUDGE } from "./context-limit-nudge"
 import { TURN_NUDGE } from "./turn-nudge"
 import { ITERATION_NUDGE } from "./iteration-nudge"
 import { MANUAL_MODE_SYSTEM_EXTENSION, SUBAGENT_SYSTEM_EXTENSION } from "./extensions/system"
+import {
+    DEFAULTS_README_FILE,
+    type PromptPaths,
+    buildDefaultPromptFileContent,
+    buildDefaultsReadmeContent,
+    readFileIfExists,
+    resolvePromptPaths,
+} from "./loader"
 
 export type PromptKey =
     | "system"
@@ -37,13 +44,6 @@ interface PromptDefinition {
 
 interface PromptOverrideCandidate {
     path: string
-}
-
-interface PromptPaths {
-    defaultsDir: string
-    globalOverridesDir: string
-    configDirOverridesDir: string | null
-    projectOverridesDir: string | null
 }
 
 export interface RuntimePrompts {
@@ -121,7 +121,6 @@ const HTML_COMMENT_REGEX = /<!--[\s\S]*?-->/g
 const LEGACY_INLINE_COMMENT_LINE_REGEX = /^[ \t]*\/\/.*?\/\/[ \t]*$/gm
 const DCP_SYSTEM_REMINDER_TAG_REGEX =
     /^\s*<dcp-system-reminder\b[^>]*>[\s\S]*<\/dcp-system-reminder>\s*$/i
-const DEFAULTS_README_FILE = "README.md"
 
 const BUNDLED_EDITABLE_PROMPTS: Record<EditablePromptField, string> = {
     system: SYSTEM_PROMPT,
@@ -147,49 +146,6 @@ function createBundledRuntimePrompts(): RuntimePrompts {
         iterationNudge: BUNDLED_EDITABLE_PROMPTS.iterationNudge,
         manualExtension: INTERNAL_PROMPT_EXTENSIONS.manualExtension,
         subagentExtension: INTERNAL_PROMPT_EXTENSIONS.subagentExtension,
-    }
-}
-
-function findOpencodeDir(startDir: string): string | null {
-    let current = startDir
-    while (current !== "/") {
-        const candidate = join(current, ".opencode")
-        if (existsSync(candidate)) {
-            try {
-                if (statSync(candidate).isDirectory()) {
-                    return candidate
-                }
-            } catch {
-                // ignore inaccessible entries while walking upward
-            }
-        }
-        const parent = dirname(current)
-        if (parent === current) {
-            break
-        }
-        current = parent
-    }
-    return null
-}
-
-function resolvePromptPaths(workingDirectory: string): PromptPaths {
-    const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config")
-    const globalRoot = join(configHome, "opencode", "dcp-prompts")
-    const defaultsDir = join(globalRoot, "defaults")
-    const globalOverridesDir = join(globalRoot, "overrides")
-
-    const configDirOverridesDir = process.env.OPENCODE_CONFIG_DIR
-        ? join(process.env.OPENCODE_CONFIG_DIR, "dcp-prompts", "overrides")
-        : null
-
-    const opencodeDir = findOpencodeDir(workingDirectory)
-    const projectOverridesDir = opencodeDir ? join(opencodeDir, "dcp-prompts", "overrides") : null
-
-    return {
-        defaultsDir,
-        globalOverridesDir,
-        configDirOverridesDir,
-        projectOverridesDir,
     }
 }
 
@@ -265,60 +221,6 @@ function wrapRuntimePromptContent(definition: PromptDefinition, editableText: st
     }
 
     return `<dcp-system-reminder>\n${trimmed}\n</dcp-system-reminder>`
-}
-
-function buildDefaultPromptFileContent(bundledEditableText: string): string {
-    return `${bundledEditableText.trim()}\n`
-}
-
-function buildDefaultsReadmeContent(): string {
-    const lines: string[] = []
-    lines.push("# DCP Prompt Defaults")
-    lines.push("")
-    lines.push("This directory stores the DCP prompts.")
-    lines.push("Each prompt file here should contain plain text only (no XML wrappers).")
-    lines.push("")
-    lines.push("## Creating Overrides")
-    lines.push("")
-    lines.push(
-        "1. Copy a prompt file from this directory into an overrides directory using the same filename.",
-    )
-    lines.push("2. Edit the copied file using plain text.")
-    lines.push("3. Restart OpenCode.")
-    lines.push("")
-    lines.push("To reset an override, delete the matching file from your overrides directory.")
-    lines.push("")
-    lines.push(
-        "Do not edit the default prompt files directly, they are just for reference, only files in the overrides directory are used.",
-    )
-    lines.push("")
-    lines.push("Override precedence (highest first):")
-    lines.push("1. `.opencode/dcp-prompts/overrides/` (project)")
-    lines.push("2. `$OPENCODE_CONFIG_DIR/dcp-prompts/overrides/` (config dir)")
-    lines.push("3. `~/.config/opencode/dcp-prompts/overrides/` (global)")
-    lines.push("")
-    lines.push("## Prompt Files")
-    lines.push("")
-
-    for (const definition of PROMPT_DEFINITIONS) {
-        lines.push(`- \`${definition.fileName}\``)
-        lines.push(`  - Purpose: ${definition.description}.`)
-        lines.push(`  - Runtime use: ${definition.usage}.`)
-    }
-
-    return `${lines.join("\n")}\n`
-}
-
-function readFileIfExists(filePath: string): string | null {
-    if (!existsSync(filePath)) {
-        return null
-    }
-
-    try {
-        return readFileSync(filePath, "utf-8")
-    } catch {
-        return null
-    }
 }
 
 export class PromptStore {
@@ -451,7 +353,7 @@ export class PromptStore {
         }
 
         const readmePath = join(this.paths.defaultsDir, DEFAULTS_README_FILE)
-        const readmeContent = buildDefaultsReadmeContent()
+        const readmeContent = buildDefaultsReadmeContent(PROMPT_DEFINITIONS)
 
         try {
             const existing = readFileIfExists(readmePath)
